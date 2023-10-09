@@ -23,7 +23,7 @@ def new_process(queue):
     process = Process(target=update_label)
     process.start()
 
-def main():
+def new_window():
     # Создание очереди для обмена данными
     queue = Queue()
 
