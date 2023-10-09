@@ -57,4 +57,5 @@ def create_chat_window():
     root.mainloop()
 
 create_chat_window()
+#полностью переделать
 
