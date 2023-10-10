@@ -3,6 +3,8 @@ import os
 import subprocess
 import shutil
 import time
+import threading
+
 from datetime import datetime, timedelta
 from tkinter import messagebox
 from tkinter import simpledialog, Label, Tk
@@ -15,7 +17,7 @@ from finder import finder
 #from doublewindow import new_window
 from process import show_process_info
 from info import create_info_window
-import threading
+
 
 SuperName = "Baza"
 SuperPath = os.path.abspath("")+"/"+SuperName+"/"
