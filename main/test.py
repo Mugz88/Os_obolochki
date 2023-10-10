@@ -385,6 +385,9 @@ class MainWindow(tkinter.Frame):
 		#binds
 		self.root.bind("<b>", lambda event:self.parent_dir())
 		self.root.bind("<Control-w>", lambda event:on_closing())
+		self.root.bind("<F1>", lambda event:create_info_window())
+		self.root.bind("<t>", lambda event:self.to_trash())
+		self.root.bind("<Control-s>", lambda event:finder())
 
 	def root_click(self, event):
 		''' функция для обработки события клика в root'''
