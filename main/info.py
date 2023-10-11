@@ -3,7 +3,7 @@ import tkinter as tk
 def create_info_window():
     # Создание нового окна
     window = tk.Tk()
-
+    window.title("Справка")
     # Создание фрейма
     frame = tk.Frame(window)
     frame.pack()
