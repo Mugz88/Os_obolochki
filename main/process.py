@@ -18,7 +18,6 @@ def update_process_info(window, text):
         elif process.pid == current_pid:
             current_processes.append(process)
     
-    # Retrieve the parent process using the psutil.Process().parent() method
     parent_process = psutil.Process(current_pid).parent()
     if parent_process is not None:
         current_processes.append(parent_process)
@@ -31,10 +30,9 @@ def update_process_info(window, text):
     for process in child_processes:
         info += f"Child PID: {process.pid}, Name: {process.name()}, Creation Date: {datetime.fromtimestamp(process.create_time())}\n"
     
-    text.delete(1.0, tk.END)
     text.insert(tk.END, info)
     print(current_pid)
-    window.after(1000, update_process_info, window, text)  # Schedule the next update after 1 second
+    window.after(10000, update_process_info, window, text) 
 
 def show_process_info():
     window = tk.Tk()
@@ -49,10 +47,11 @@ def show_process_info():
             with open(file_path, "w") as file:
                 file.write(text.get(1.0, tk.END))
     
-    save_button = tk.Button(window, text="Save to File", command=lambda: save_to_file(window))
+    save_button = tk.Button(window, text="Save to File", command=lambda: save_to_file())
     save_button.pack()
-    
-    update_process_info(window, text)  # Start the initial update
+    test_button = tk.Button(window, text="Test", command=create_processes_with_tkinter)
+    test_button.pack(anchor="ne")
+    update_process_info(window, text) 
     
     window.mainloop()
 
