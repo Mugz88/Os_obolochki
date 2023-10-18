@@ -67,6 +67,7 @@ class MainContextMenu(tkinter.Menu):
 		self.main_window = main_window
 		self.add_command(label="Создать директорию", command = self.create_dir)
 		self.add_command(label="Создать файл", command = self.create_file)
+		
 
 	def popup_menu(self, event):
 		''' функция для активации контекстного меню'''
@@ -134,9 +135,10 @@ class FileContextMenu(tkinter.Menu):
 		self.add_separator()
 		self.add_command(label="Копировать", command = self.copy_file)
 		self.add_command(label="Переименовать", command = self.rename_file)
+		self.add_command(label="Drag" )
 		self.add_separator()
 		self.add_command(label="Удалить в корзину", command = self.delete_file)
-		self.add_command(label="Удалить")
+		self.add_command(label="Удалить", command=self.del_file)
 
 
 	def open_file(self):
@@ -196,7 +198,18 @@ class FileContextMenu(tkinter.Menu):
 			messagebox.showwarning("Проблема при удалении файла", 'У Вас нет прав для удаления данного файла')
 		self.main_window.refresh_window()
 		log_action("Файл: "+self.main_window.selected_file+" был перемещен в корзину")
-
+  
+	def del_file(self):
+		full_path = self.main_window.path_text.get() + self.main_window.selected_file
+		#выполняем команду отдельным процессом
+		process = subprocess.Popen(['rm', full_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		output, err = process.communicate()
+		#при возникновении ошибки выводим сообщение
+		if err:
+			messagebox.showwarning("Проблема при удалении файла", 'У Вас нет прав для удаления данного файла')
+		self.main_window.refresh_window()
+		log_action("Файл: "+self.main_window.selected_file+" был удален")
+  
 	def rename_file(self):
 		''' функция для переименования выбранного файла'''
 		new_name = simpledialog.askstring("Переименование файла", "Введите новое название файла")
@@ -228,9 +241,10 @@ class DirContextMenu(tkinter.Menu):
 		self.main_window = main_window
 		self.add_command(label="Переименовать", command = self.rename_dir)
 		self.add_command(label="Копировать", command = self.copy_dir)
+		self.add_command(label="Drag" )
 		self.add_separator()
 		self.add_command(label="Удалить в корзину", command = self.delete_dir)
-		self.add_command(label="Удалить")
+		self.add_command(label="Удалить", command=self.del_dir)
 
 	def copy_dir(self):
 		''' функция для копирования директории'''
@@ -265,6 +279,19 @@ class DirContextMenu(tkinter.Menu):
 				messagebox.showwarning("Проблема при удалении директории", 'У Вас нет прав для удаления данной директории')
 		self.main_window.refresh_window()
 		log_action("Директория: "+self.main_window.selected_file+" была перемещена в корзину")
+  
+	def del_dir(self):
+		full_path = self.main_window.path_text.get() + self.main_window.selected_file
+		if os.path.isdir(full_path):
+			#выполняем команду отдельным процессом
+			process = subprocess.Popen(['rm', '-rf', full_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			output, err = process.communicate()
+			#при возникновении ошибки выводим сообщение
+			if err:
+				messagebox.showwarning("Проблема при удалении директории", 'У Вас нет прав для удаления данной директории')
+		self.main_window.refresh_window()
+		log_action("Директория: "+self.main_window.selected_file+" была навсегда утрачена")
+  
 	def rename_dir(self):
 		''' функция для переименования выбранной директории'''
 		new_name = simpledialog.askstring("Переименование директории", "Введите новое название директории")
@@ -298,6 +325,7 @@ class MainWindow(tkinter.Frame):
 		self.root.geometry('800x600')	
 		self.hidden_dir = tkinter.IntVar()
 		self.buff = None
+		self.drag_and_drop = {'test':1}
 		self.all_program = os.listdir("/home/sany/snap/")
 		log_action("Программа запущена")
 
@@ -413,6 +441,9 @@ class MainWindow(tkinter.Frame):
 			self.canvas.bind('<Button-3>', self.main_context_menu.popup_menu)
 			if self.buff:
 				self.main_context_menu.add_command(label="Вставить", command = self.main_context_menu.insert_to_dir)
+			if self.drag_and_drop:
+				self.main_context_menu.add_command(label="Drop" )
+				self.main_context_menu.add_command(label="Clear Drag", command=self.clear_drag)
 			self.inner_frame.bind('<Button-3>', self.main_context_menu.popup_menu)
 			#контекстное меню для файлов
 			self.file_context_menu = None
@@ -425,6 +456,9 @@ class MainWindow(tkinter.Frame):
 		self.canvas.bind('<Button-3>', self.main_context_menu.popup_menu)
 		if self.buff:
 			self.main_context_menu.add_command(label="Вставить", command = self.main_context_menu.insert_to_dir)
+		if self.drag_and_drop:
+			self.main_context_menu.add_command(label="Drop" )
+			self.main_context_menu.add_command(label="Clear Drag", command=self.clear_drag)
 		#контекстное меню для файлов
 		self.file_context_menu = FileContextMenu(self, self.inner_frame)
 		#контекстное меню для директории
@@ -476,7 +510,11 @@ class MainWindow(tkinter.Frame):
 		#обновляем inner_frame и устанавливаем прокрутку для нового содержимого
 		self.inner_frame.update()
 		self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-
+  
+	def clear_drag(self):
+		self.drag_and_drop = {}
+		self.refresh_window()
+  
 	def move_to_dir(self, event):
 		''' функция для перехода в выбранную директорию'''
 		elem = event.widget
