@@ -127,6 +127,48 @@ class MainContextMenu(tkinter.Menu):
 		self.main_window.refresh_window()
 		log_action("Объект: "+copy_obj+" был скопирован в "+to_dir)
   
+		
+	def drop(self):
+		'''функция переноса'''
+		for i in range(len(self.main_window.drag_and_drop)):
+			buffi = [i for i in self.main_window.drag_and_drop[i].split('/') if i]
+			j = i
+			while j < len(self.main_window.drag_and_drop):
+				
+				buffj = [i for i in self.main_window.drag_and_drop[j].split('/') if i]
+				for word in buffj[:-1]:    
+					if buffi[-1] == word:
+						bl = self.main_window.drag_and_drop[i]
+						self.main_window.drag_and_drop[i] = self.main_window.drag_and_drop[j]
+						self.main_window.drag_and_drop[j] = bl
+				j+=1
+		for obj in self.main_window.drag_and_drop:
+			copy_obj = obj
+			to_dir = self.main_window.path_text.get()
+			if os.path.isdir(obj):
+				#выполняем команду отдельным процессом
+				process = subprocess.Popen(['cp', '-r', copy_obj, to_dir], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+				out, err = process.communicate()
+				if err:
+					messagebox.showwarning("Операция невозможна!", err.decode("utf-8"))
+			else:
+				#выполняем команду отдельным процессом
+				process = subprocess.Popen(['cp', '-n', copy_obj, to_dir], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+				out, err = process.communicate()
+				#при возникновении ошибки выводим сообщение
+				if err:
+					messagebox.showwarning("Операция невозможна!",err.decode("utf-8"))
+			full_path = obj
+			#выполняем команду отдельным процессом
+			process = subprocess.Popen(['rm','-rf', full_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			output, err = process.communicate()
+			#при возникновении ошибки выводим сообщение
+			if err:
+				messagebox.showwarning("Проблема при удалении файла", 'У Вас нет прав для удаления данного файла')
+			log_action("Объект: "+copy_obj+" был перенесен в "+to_dir)
+		self.main_window.refresh_window()
+		self.main_window.clear_drag()
+	
 class FileContextMenu(tkinter.Menu):
 	def __init__(self, main_window, parent):
 		super(FileContextMenu, self).__init__(parent, tearoff = 0)
@@ -135,7 +177,7 @@ class FileContextMenu(tkinter.Menu):
 		self.add_separator()
 		self.add_command(label="Копировать", command = self.copy_file)
 		self.add_command(label="Переименовать", command = self.rename_file)
-		self.add_command(label="Drag" )
+		self.add_command(label="Drag", command=self.drag_file )
 		self.add_separator()
 		self.add_command(label="Удалить в корзину", command = self.delete_file)
 		self.add_command(label="Удалить", command=self.del_file)
@@ -167,6 +209,11 @@ class FileContextMenu(tkinter.Menu):
 	def problem_message(self):
 		messagebox.showwarning("Проблема при открытии файла", 'Прости, но я не могу открыть этот файл')
 
+	def drag_file(self):
+		self.main_window.drag_and_drop.append(self.main_window.path_text.get() + self.main_window.selected_file)
+		print(self.main_window.drag_and_drop)
+		self.main_window.refresh_window()
+ 
 	def copy_file(self):
 		''' функция для копирования файла'''
 		#заносим полный путь к файлу в буффер
@@ -241,11 +288,17 @@ class DirContextMenu(tkinter.Menu):
 		self.main_window = main_window
 		self.add_command(label="Переименовать", command = self.rename_dir)
 		self.add_command(label="Копировать", command = self.copy_dir)
-		self.add_command(label="Drag" )
+		self.add_command(label="Drag", command=self.drag_dir)
 		self.add_separator()
 		self.add_command(label="Удалить в корзину", command = self.delete_dir)
 		self.add_command(label="Удалить", command=self.del_dir)
-
+	
+	def drag_dir(self):
+		'''функция для взятия директории'''
+		self.main_window.drag_and_drop.append(self.main_window.path_text.get() + self.main_window.selected_file)
+		print(self.main_window.drag_and_drop)
+		self.main_window.refresh_window()
+ 
 	def copy_dir(self):
 		''' функция для копирования директории'''
 		self.main_window.buff = self.main_window.path_text.get() + self.main_window.selected_file
@@ -325,7 +378,7 @@ class MainWindow(tkinter.Frame):
 		self.root.geometry('800x600')	
 		self.hidden_dir = tkinter.IntVar()
 		self.buff = None
-		self.drag_and_drop = {'test':1}
+		self.drag_and_drop = []
 		self.all_program = os.listdir("/home/sany/snap/")
 		log_action("Программа запущена")
 
@@ -442,7 +495,7 @@ class MainWindow(tkinter.Frame):
 			if self.buff:
 				self.main_context_menu.add_command(label="Вставить", command = self.main_context_menu.insert_to_dir)
 			if self.drag_and_drop:
-				self.main_context_menu.add_command(label="Drop" )
+				self.main_context_menu.add_command(label="Drop",command=self.main_context_menu.drop )
 				self.main_context_menu.add_command(label="Clear Drag", command=self.clear_drag)
 			self.inner_frame.bind('<Button-3>', self.main_context_menu.popup_menu)
 			#контекстное меню для файлов
@@ -457,7 +510,7 @@ class MainWindow(tkinter.Frame):
 		if self.buff:
 			self.main_context_menu.add_command(label="Вставить", command = self.main_context_menu.insert_to_dir)
 		if self.drag_and_drop:
-			self.main_context_menu.add_command(label="Drop" )
+			self.main_context_menu.add_command(label="Drop",command=self.main_context_menu.drop )
 			self.main_context_menu.add_command(label="Clear Drag", command=self.clear_drag)
 		#контекстное меню для файлов
 		self.file_context_menu = FileContextMenu(self, self.inner_frame)
@@ -512,9 +565,9 @@ class MainWindow(tkinter.Frame):
 		self.canvas.configure(scrollregion=self.canvas.bbox("all"))
   
 	def clear_drag(self):
-		self.drag_and_drop = {}
+		self.drag_and_drop = []
 		self.refresh_window()
-  
+
 	def move_to_dir(self, event):
 		''' функция для перехода в выбранную директорию'''
 		elem = event.widget
