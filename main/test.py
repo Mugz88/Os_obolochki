@@ -661,6 +661,7 @@ def open_log_window():
         logpath = SuperPath+"/System/Logs/"+filename
         with open(logpath, "w") as file:
             file.write(log_message)
+            
 
     def show_logs():
         def on_closing():
