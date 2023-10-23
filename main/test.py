@@ -26,6 +26,9 @@ os.mkdir(SuperPath+"System")
 os.mkdir(SuperPath+"MyDoc")
 os.mkdir(SuperPath+"ProgramFile")
 os.mkdir(SuperPath+"System"+"/"+"Trash")
+os.mkdir(SuperPath+"System"+"/"+"Logs")
+os.mkdir(SuperPath+"System"+"/"+"Utilities")
+os.system("sudo chattr +i "+SuperPath+"System/")
 
 
 class TrashContexMenu(tkinter.Menu):
@@ -655,7 +658,8 @@ def open_log_window():
     def save_logs_to_file():
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"logs_{timestamp}.txt"
-        with open(filename, "w") as file:
+        logpath = SuperPath+"/System/Logs/"+filename
+        with open(logpath, "w") as file:
             file.write(log_message)
 
     def show_logs():
@@ -694,6 +698,7 @@ def button_click(event):
     button_name = event.widget.cget("text")
     log_action(f"{button_name} была использована")
 def on_closing():
+    os.system("sudo chattr -R -i "+SuperPath)
     shutil.rmtree(SuperPath)
     win.root.destroy()  # Закрыть окно
 
