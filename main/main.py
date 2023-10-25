@@ -4,6 +4,7 @@ import subprocess
 import shutil
 import time
 import threading
+import getpass
 
 from datetime import datetime, timedelta
 from tkinter import messagebox
@@ -26,6 +27,9 @@ os.mkdir(SuperPath+"System")
 os.mkdir(SuperPath+"MyDoc")
 os.mkdir(SuperPath+"ProgramFile")
 os.mkdir(SuperPath+"System"+"/"+"Trash")
+os.mkdir(SuperPath+"System"+"/"+"Logs")
+os.mkdir(SuperPath+"System"+"/"+"Utilities")
+os.system("sudo chattr +i "+SuperPath+"System/")
 
 
 class TrashContexMenu(tkinter.Menu):
@@ -409,7 +413,7 @@ class MainWindow(tkinter.Frame):
 		self.title_frame.pack(fill = 'both', expand = True)
 		self.info_button = tkinter.Button(self.title_frame, text = "?", command = self.info_program, width = 1, height = 1)
 		self.info_button.pack(side = 'right',anchor="nw")
-  
+
 		#trashBoxButton
 		#self.into_button = tkinter.Button(self.title_frame, text="мусор", command=self.to_trash, width=2,height=2)
 		#self.into_button.pack(side = 'bottom', anchor = "w")
@@ -438,6 +442,11 @@ class MainWindow(tkinter.Frame):
 		self.time_label = tkinter.Label(self.main_frame, text=" ")
 		self.time_label.pack(side = 'right', anchor='se')
 		self.update_clock()
+
+		#USB devices
+		self.usbFrame = tkinter.Frame(self.main_frame)
+		self.usbFrame.pack(side = 'left', anchor='n')
+		self.update_device_list()
   
 		# scroll bar
 		self.scrollbar_vert = tkinter.Scrollbar(self.main_frame, orient="vertical")
@@ -644,6 +653,41 @@ class MainWindow(tkinter.Frame):
 		self.time_label.configure(text=now)
 		self.time_work+=1
 		self.root.after(1000, self.update_clock)
+  
+	def get_media_devices(self):
+		username = getpass.getuser()
+		media_path = os.path.join('/media', username)
+
+		if not os.path.exists(media_path):
+			return []
+
+		devices = os.listdir(media_path)
+		return devices
+
+	def show_device_path(self, device_path):
+		self.path_text.set(device_path+"/")
+		print("Device path:", device_path)
+		self.refresh_window()
+
+	def handle_button_click( self, device):
+		device_path = os.path.join('/media', getpass.getuser(), device)
+		self.show_device_path(device_path)
+
+	def update_device_list(self):
+		devices = self.get_media_devices()
+
+		self.usbFrame.update_idletasks()  # Обновить виджеты перед обновлением списка
+
+		# Удалить все виджеты
+		for widget in self.usbFrame.winfo_children():
+			widget.pack_forget()
+
+		if devices:
+			for device in devices:
+				button = tkinter.Button(self.usbFrame, text=device, cursor="hand2", command=lambda d=device: self.handle_button_click(d))
+				button.pack()
+
+		self.root.after(1000, self.update_device_list)
 log_message = ""
 
 def log_action(action):
@@ -655,8 +699,10 @@ def open_log_window():
     def save_logs_to_file():
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"logs_{timestamp}.txt"
-        with open(filename, "w") as file:
+        logpath = SuperPath+"/System/Logs/"+filename
+        with open(logpath, "w") as file:
             file.write(log_message)
+            
 
     def show_logs():
         def on_closing():
@@ -694,6 +740,7 @@ def button_click(event):
     button_name = event.widget.cget("text")
     log_action(f"{button_name} была использована")
 def on_closing():
+    os.system("sudo chattr -R -i "+SuperPath)
     shutil.rmtree(SuperPath)
     win.root.destroy()  # Закрыть окно
 
