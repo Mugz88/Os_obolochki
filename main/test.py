@@ -193,22 +193,14 @@ class FileContextMenu(tkinter.Menu):
 		full_path = self.main_window.path_text.get() + self.main_window.selected_file
 
 		if ext in ['txt', 'py', 'html', 'css', 'js']:
-			if 'mousepad' in self.main_window.all_program:
-				subprocess.Popen(["mousepad", full_path], start_new_session = True)
-			else:
-				self.problem_message()
+			subprocess.Popen('open '+full_path, shell=True, start_new_session=True)
 		elif ext == 'pdf':
-			if 'evince' in self.main_window.all_program:
-				subprocess.run(["evince", full_path], start_new_session = True)
-			else:
-				self.problem_message()
+			subprocess.Popen('open '+full_path, shell=True, start_new_session=True)
 		elif ext in ['png', 'jpeg', 'jpg', 'gif']:
-			if 'ristretto' in self.main_window.all_program:
-				subprocess.run(["ristretto", full_path], start_new_session = True)
-			else:
-				self.problem_message()
+			subprocess.Popen('open '+full_path, shell=True, start_new_session=True) #тут доделать
 		else:
 			self.problem_message()
+
 
 	def problem_message(self):
 		messagebox.showwarning("Проблема при открытии файла", 'Прости, но я не могу открыть этот файл')
@@ -383,7 +375,7 @@ class MainWindow(tkinter.Frame):
 		self.hidden_dir = tkinter.IntVar()
 		self.buff = None
 		self.drag_and_drop = []
-		self.all_program = os.listdir("/home/sany/snap/")
+		#self.all_program = os.listdir("/home/sany/snap/")
 		log_action("Программа запущена")
 
 		self.root.bind('<Button-1>', self.root_click)
