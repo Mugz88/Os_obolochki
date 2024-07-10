@@ -1,14 +1,27 @@
-drag = ['/home/sany/Документы/stud/Os_obolochki/Baza/Doc','/home/sany/Документы/stud/Os_obolochki/Baza/ProgramFile','/home/sany/Документы/stud/Os_obolochki/Baza/ProgramFile/Без имени 1', '/home/sany/Документы/stud/Os_obolochki/Baza/ProgramFile','/home/sany/Документы/stud/Os_obolochki/Baza/ProgramFile/Без имени 2'  ]
-for i in range(len(drag)):
-    buffi = [i for i in drag[i].split('/') if i]
-    j = i
-    while j < len(drag):
-        
-        buffj = [i for i in drag[j].split('/') if i]
-        for word in buffj[:-1]:    
-            if buffi[-1] == word:
-                bl = drag[i]
-                drag[i] = drag[j]
-                drag[j] = bl
-        j+=1
-print(drag)
+import tkinter as tk
+
+class MyApp:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.title_frame = tk.Frame(self.root)
+        self.title_frame.pack()
+
+        self.pat_text = tk.StringVar(value="Начальный текст")
+
+        self.current_path = tk.Entry(self.title_frame, textvariable=self.pat_text, width=80, state='readonly')
+        self.current_path.pack()
+
+        self.button = tk.Button(self.title_frame, text="Открыть второе окно", command=self.open_second_window)
+        self.button.pack()
+
+        self.root.mainloop()
+
+    def open_second_window(self):
+        second_window = tk.Toplevel(self.root)
+        second_label = tk.Label(second_window, textvariable=self.pat_text)
+        second_label.pack()
+
+        new_text = "Новый текст"
+        self.pat_text.set(new_text)
+
+app = MyApp()

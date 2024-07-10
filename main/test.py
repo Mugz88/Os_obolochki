@@ -5,6 +5,7 @@ import shutil
 import time
 import threading
 import getpass
+import socket
 
 from datetime import datetime, timedelta
 from tkinter import messagebox
@@ -15,8 +16,8 @@ from mycloak import cloaks
 from wifi_info import display_wifi_info
 from terminal import myterm
 from finder import finder
-#from doublewindow import new_window
-from process import show_process_info
+from doublewindow import doubleWin
+from process import process_view
 from info import create_info_window
 
 
@@ -181,7 +182,7 @@ class FileContextMenu(tkinter.Menu):
 		self.add_separator()
 		self.add_command(label="Копировать", command = self.copy_file)
 		self.add_command(label="Переименовать", command = self.rename_file)
-		self.add_command(label="Drag", command=self.drag_file )
+		self.add_command(label="Drag", command=self.drag_file)
 		self.add_separator()
 		self.add_command(label="Удалить в корзину", command = self.delete_file)
 		self.add_command(label="Удалить", command=self.del_file)
@@ -280,6 +281,7 @@ class FileContextMenu(tkinter.Menu):
 
 class DirContextMenu(tkinter.Menu):
 	def __init__(self, main_window, parent):
+     
 		super(DirContextMenu, self).__init__(parent, tearoff = 0)
 		self.main_window = main_window
 		self.add_command(label="Переименовать", command = self.rename_dir)
@@ -377,7 +379,7 @@ class MainWindow(tkinter.Frame):
 		self.drag_and_drop = []
 		#self.all_program = os.listdir("/home/sany/snap/")
 		log_action("Программа запущена")
-
+  
 		self.root.bind('<Button-1>', self.root_click)
 		self.root.bind('<FocusOut>', self.root_click)
 
@@ -391,9 +393,9 @@ class MainWindow(tkinter.Frame):
 		
 		menu.add_command(label="Мусор", command=self.to_trash)
 		menu.add_cascade(label="Tools", menu=tools)
-		menu.add_command(label="Второе окно", command="")
+		menu.add_command(label="Второе окно", command=doubleWin)
 		menu.add_command(label="Терминал", command=myterm)
-		menu.add_command(label="Процессы", command=show_process_info)
+		menu.add_command(label="Процессы", command=process_view)
 		menu.add_command(label="Логи", command=open_log_window)	
 		menu.add_command(label="Поиск", command=finder)
 		menu.add_command(label="Справка", command=create_info_window)
@@ -470,6 +472,75 @@ class MainWindow(tkinter.Frame):
 		self.root.bind("<F1>", lambda event:create_info_window())
 		self.root.bind("<t>", lambda event:self.to_trash())
 		self.root.bind("<Control-s>", lambda event:finder())
+  
+		def server_function():
+			HOST = '0.0.0.0'
+			PORT = 12445
+
+			server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+			server_sock.bind((HOST, PORT))
+			server_sock.listen(5)
+
+			print(f'Сервер запущен на {HOST}:{PORT}')
+
+			while True:
+				client_sock, addr = server_sock.accept()
+				print(f'Установлено соединение с {addr}')
+
+				try:
+					while True:
+						data = self.buff
+						client_sock.sendall(data.encode('utf-8'))
+
+						# Здесь вы можете добавить код для обработки ответа от клиента, если это необходимо.
+
+						time.sleep(1)
+				except Exception as e:
+					print(f'Ошибка: {e}')
+
+				client_sock.close()	
+		server_thread = threading.Thread(target=server_function)
+		server_thread.start()
+  
+	def start_server(self):
+		# Create a socket object
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+		# Bind the socket to a specific address and port
+		sock.bind(('localhost', 12345))
+
+		# Listen for incoming connections
+		sock.listen(1)
+
+		while True:
+			# Wait for an incoming connection
+			conn, addr = sock.accept()
+
+			# Receive the data from the second window
+			data = conn.recv(1024).decode()
+
+			# Update the label with the received data
+			self.data.set(data)
+
+			# Close the connection
+			conn.close()
+   
+	def send_data(self):
+		# Get the data from the entry widget
+		data = self.data
+
+		# Create a socket object
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+		# Connect to the server
+		sock.connect(('localhost', 12345))
+
+		# Send the data to the server
+		sock.sendall(data.encode())
+
+		# Close the connection
+		sock.close()
 
 	def root_click(self, event):
 		''' функция для обработки события клика в root'''
@@ -627,6 +698,7 @@ class MainWindow(tkinter.Frame):
 		for widget in self.inner_frame.winfo_children():
 				widget.destroy()
 		self.dir_content()
+		self.create_visible_txt_file()
 		self.canvas.yview_moveto(0)
   
 	def trash_cheak(self):
@@ -636,8 +708,22 @@ class MainWindow(tkinter.Frame):
 			if i == "Trash":
 				return True
 		return False	
+	def create_visible_txt_file(self):
+		file_path = SuperPath+"buff.txt"
+		dir_list = os.listdir(self.path_text.get())
+		if (not self.hidden_dir.get()):
+			hiden = 'false'
+		else:
+			hiden = 'true'
+		self.data = ''.join(self.path_text.get())+'\n'+ ' '.join(dir_list)+'\n'+' '.join(hiden)
+		self.buff = self.data
+		try:
+			with open(file_path, 'w+') as file:
+				file.write(self.data)
+			print(f"Создан видимый файл {file_path} и записаны данные")
+		except IOError:
+			print(f"Ошибка при создании файла {file_path}")
 	
-
 	time_work = 0
 	def update_clock(self):
 		'''функция обновления времени'''
@@ -664,7 +750,14 @@ class MainWindow(tkinter.Frame):
 	def handle_button_click( self, device):
 		device_path = os.path.join('/media', getpass.getuser(), device)
 		self.show_device_path(device_path)
+	def open_second_window(self):
+		# Hide the main window
+		self.withdraw()
 
+		# Create the second window
+		self.second_window = SecondWindow(self)
+		self.wait_window(self.second_window)  # Make the second window modal
+		self.deiconify()  # Show the main window again
 	def update_device_list(self):
 		devices = self.get_media_devices()
 
@@ -681,6 +774,167 @@ class MainWindow(tkinter.Frame):
 
 		self.root.after(1000, self.update_device_list)
 log_message = ""
+class SecondWindow(tkinter.Toplevel):
+    def __init__(self, master, data_var):
+        super().__init__(master)
+
+        self.root = master
+        self.data_var = data_var
+
+        self.title('Second Window')
+        self.geometry('800x600')
+
+        # Создание меню
+        self.menu_bar = tkinter.Menu(self)
+        self.file_menu = tkinter.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label="File", menu=self.file_menu)
+        self.file_menu.add_command(label="New", command=self.on_file_new)
+        self.file_menu.add_command(label="Open", command=self.on_file_open)
+        self.file_menu.add_command(label="Save", command=self.on_file_save)
+        self.menu_bar.add_command(label="Мусор")
+        self.menu_bar.add_cascade(label="Tools")
+        self.menu_bar.add_command(label="Второе окно")
+        self.menu_bar.add_command(label="Терминал")
+        self.menu_bar.add_command(label="Процессы")
+        self.menu_bar.add_command(label="Логи")
+        self.menu_bar.add_command(label="Поиск")
+        self.menu_bar.add_command(label="Справка")
+
+        #top frame
+        self.title_frame = tkinter.Frame(self)
+        self.title_frame.pack(fill = 'both', expand = True)
+        self.info_button = tkinter.Button(self.title_frame, text = "?", width = 1, height = 1)
+        self.info_button.pack(side = 'right',anchor="nw")
+        #back button
+        self.back_button = tkinter.Button(self.title_frame, text = "..", width = 1, height = 1)
+        self.back_button.pack(side = 'left',anchor="nw")
+
+        #path entry
+        self.pat_text = tkinter.StringVar()
+        self.pat_text.set("path")
+        self.current_path = tkinter.Entry(self.title_frame, textvariable = self.pat_text, width = 80, state='readonly')
+        self.current_path.pack(side = 'left',anchor="nw",fill="x")
+
+        #button show/hidde hidden dir/file
+        self.hiden_dir = tkinter.IntVar()
+        self.check_button = tkinter.Checkbutton(self.title_frame, text = "Hidden", font = ("Helvetica", 10), padx = 1, pady = 1, variable = self.hiden_dir)
+        self.check_button.pack(side = 'left',anchor="nw")
+
+        # Установка меню в окне
+        self.config(menu=self.menu_bar)
+        #main frame
+        self.main_frame = tkinter.Frame(self)
+        self.main_frame.pack()
+        def update_clock():
+            '''функция обновления времени'''
+            new = datetime.now()
+            self.time_label.configure(text=new.strftime("%H:%M:%S"))
+            self.after(1000, update_clock)
+
+        #time running
+        self.time_label = tkinter.Label(self.main_frame, text=" ")
+        self.time_label.pack(side = 'right', anchor='se')
+        update_clock()
+
+        #USB devices
+        self.usbFrame = tkinter.Frame(self.main_frame)
+        self.usbFrame.pack(side = 'left', anchor='n')
+        self.update_device_list()
+
+        # scroll bar
+        self.scrollbar_vert = tkinter.Scrollbar(self.main_frame, orient="vertical")
+        self.scrollbar_vert.pack(side = 'right', fill = 'y')
+
+        self.scrollbar_hor = tkinter.Scrollbar(self.main_frame, orient="horizontal")
+        self.scrollbar_hor.pack(side = 'bottom', fill = 'x')
+
+        #canvas
+        self.canvas = tkinter.Canvas(self.main_frame, borderwidth=0,  bg = 'white')
+        self.inner_frame = tkinter.Frame(self.canvas,  bg = 'white')
+
+        #команды для прокрутки
+        self.scrollbar_vert["command"] = self.canvas.yview
+        self.scrollbar_hor["command"] = self.canvas.xview
+
+        #настройки для canvas
+        self.canvas.configure(yscrollcommand=self.scrollbar_vert.set, xscrollcommand = self.scrollbar_hor.set, width=600, heigh=550)
+
+        self.canvas.pack(side='left', fill='both', expand=True)
+        self.canvas.create_window((0,0), window=self.inner_frame, anchor="nw")
+        SuperName = "Baza"
+        SuperPath = os.path.abspath("")+"/"+SuperName+"/"
+        path=SuperPath+"buff.txt"
+        def update_buff():
+            for widget in self.inner_frame.winfo_children():
+                widget.destroy()
+            
+            i = 0
+            with open(path, 'r') as file:
+                lines = file.readlines()
+            # Check if the data in the StringVar matches the data in the file
+            if self.data_var.get() == lines[1].strip():
+                # Display the data in the canvas
+                for item in lines[1].split(" "):
+                    folder_name = tkinter.Label(self.inner_frame, text=item,  bg = 'white')
+                    folder_name.grid(row=i, sticky='w')
+                    i+=1
+            else:
+                # Display a message in the canvas
+                message = tkinter.Label(self.inner_frame, text="No data to display", bg='white')
+                message.grid(row=0, column=0)
+
+            if (lines[2]=="true"):
+                self.hiden_dir.set(1)
+            else:
+                self.hiden_dir.set(0)
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            self.canvas.yview_moveto(0)
+            self.after(1000, update_buff)
+        update_buff()
+        #отрисовываем содержимое лиректории
+    def get_media_devices(self):
+        username = getpass.getuser()
+        media_path = os.path.join('/media', username)
+
+        if not os.path.exists(media_path):
+            return []
+
+        devices = os.listdir(media_path)
+        return devices
+
+    def update_device_list(self):
+        devices = self.get_media_devices()
+
+        self.usbFrame.update_idletasks()  # Обновить виджеты перед обновлением списка
+
+        # Удалить все виджеты
+        for widget in self.usbFrame.winfo_children():
+            widget.pack_forget()
+
+        if devices:
+            for device in devices:
+                button = tkinter.Button(self.usbFrame, text=device, cursor="hand2")
+                button.pack()
+
+        self.after(1000, self.update_device_list)
+
+    def on_file_new(self):
+        print("New file")
+
+    def on_file_open(self):
+        print("Open file")
+
+    def on_file_save(self):
+        # Get the data from the StringVar
+        data = self.data_var.get()
+
+        # Write the data to the file
+        with open('messages.txt', 'w') as f:
+            f.write('path\n')
+            f.write(data + '\n')
+            f.write('false')
+
+        print("Save file")
 
 def log_action(action):
     global log_message

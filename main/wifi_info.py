@@ -1,5 +1,3 @@
-# #думаю нужно выводить инфу из терминала
-# # или найти библиотеку
 # from subprocess import check_output as t 
 # from platform import system as s
 # from re import findall as f

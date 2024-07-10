@@ -9,7 +9,8 @@ def myterm():
     class Example(QtWidgets.QMainWindow):
         def __init__(self):
             super(Example, self).__init__()
-            uic.loadUi('kursach/gui.ui', self)
+            SuperPath = os.path.abspath("")+"/"
+            uic.loadUi(SuperPath+'gui.ui', self)
             self.lineEdit.returnPressed.connect(self.doCMD)
             #self.pushButtonInstall.clicked.connect(self.onClick)
             self.working_dir = "."

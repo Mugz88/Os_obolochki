@@ -15,8 +15,8 @@ from mycloak import cloaks
 from wifi_info import display_wifi_info
 from terminal import myterm
 from finder import finder
-#from doublewindow import new_window
-from process import show_process_info
+from doublewindow import doubleWin
+from process import process_view
 from info import create_info_window
 
 
@@ -181,7 +181,7 @@ class FileContextMenu(tkinter.Menu):
 		self.add_separator()
 		self.add_command(label="Копировать", command = self.copy_file)
 		self.add_command(label="Переименовать", command = self.rename_file)
-		self.add_command(label="Drag", command=self.drag_file )
+		self.add_command(label="Drag", command=self.drag_file)
 		self.add_separator()
 		self.add_command(label="Удалить в корзину", command = self.delete_file)
 		self.add_command(label="Удалить", command=self.del_file)
@@ -193,22 +193,14 @@ class FileContextMenu(tkinter.Menu):
 		full_path = self.main_window.path_text.get() + self.main_window.selected_file
 
 		if ext in ['txt', 'py', 'html', 'css', 'js']:
-			if 'mousepad' in self.main_window.all_program:
-				subprocess.Popen(["mousepad", full_path], start_new_session = True)
-			else:
-				self.problem_message()
+			subprocess.Popen('open '+full_path, shell=True, start_new_session=True)
 		elif ext == 'pdf':
-			if 'evince' in self.main_window.all_program:
-				subprocess.run(["evince", full_path], start_new_session = True)
-			else:
-				self.problem_message()
+			subprocess.Popen('open '+full_path, shell=True, start_new_session=True)
 		elif ext in ['png', 'jpeg', 'jpg', 'gif']:
-			if 'ristretto' in self.main_window.all_program:
-				subprocess.run(["ristretto", full_path], start_new_session = True)
-			else:
-				self.problem_message()
+			subprocess.Popen('open '+full_path, shell=True, start_new_session=True) #тут доделать
 		else:
 			self.problem_message()
+
 
 	def problem_message(self):
 		messagebox.showwarning("Проблема при открытии файла", 'Прости, но я не могу открыть этот файл')
@@ -288,6 +280,7 @@ class FileContextMenu(tkinter.Menu):
 
 class DirContextMenu(tkinter.Menu):
 	def __init__(self, main_window, parent):
+     
 		super(DirContextMenu, self).__init__(parent, tearoff = 0)
 		self.main_window = main_window
 		self.add_command(label="Переименовать", command = self.rename_dir)
@@ -383,7 +376,7 @@ class MainWindow(tkinter.Frame):
 		self.hidden_dir = tkinter.IntVar()
 		self.buff = None
 		self.drag_and_drop = []
-		self.all_program = os.listdir("/home/sany/snap/")
+		#self.all_program = os.listdir("/home/sany/snap/")
 		log_action("Программа запущена")
 
 		self.root.bind('<Button-1>', self.root_click)
@@ -399,9 +392,9 @@ class MainWindow(tkinter.Frame):
 		
 		menu.add_command(label="Мусор", command=self.to_trash)
 		menu.add_cascade(label="Tools", menu=tools)
-		menu.add_command(label="Второе окно", command="")
+		menu.add_command(label="Второе окно", command=doubleWin)
 		menu.add_command(label="Терминал", command=myterm)
-		menu.add_command(label="Процессы", command=show_process_info)
+		menu.add_command(label="Процессы", command=process_view)
 		menu.add_command(label="Логи", command=open_log_window)	
 		menu.add_command(label="Поиск", command=finder)
 		menu.add_command(label="Справка", command=create_info_window)
@@ -635,6 +628,7 @@ class MainWindow(tkinter.Frame):
 		for widget in self.inner_frame.winfo_children():
 				widget.destroy()
 		self.dir_content()
+		self.create_visible_txt_file()
 		self.canvas.yview_moveto(0)
   
 	def trash_cheak(self):
@@ -644,8 +638,21 @@ class MainWindow(tkinter.Frame):
 			if i == "Trash":
 				return True
 		return False	
+	def create_visible_txt_file(self):
+		file_path = SuperPath+"buff.txt"
+		dir_list = os.listdir(self.path_text.get())
+		if (not self.hidden_dir.get()):
+			hiden = "false"
+		else:
+			hiden = "true"
+		data = ''.join(self.path_text.get())+'\n'+ ' '.join(dir_list)+'\n'+''.join(hiden)
+		try:
+			with open(file_path, 'w+') as file:
+				file.write(data)
+			print(f"Создан видимый файл {file_path} и записаны данные")
+		except IOError:
+			print(f"Ошибка при создании файла {file_path}")
 	
-
 	time_work = 0
 	def update_clock(self):
 		'''функция обновления времени'''
